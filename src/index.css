@@ -52,46 +52,6 @@ body.kiosk {
   pointer-events: none;
 }
 
-.section .label {
-  text-align: center;
-  line-height: 1.25;
-  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.8);
-  pointer-events: none;
-}
-
-.section .label .name {
-  display: block;
-  font-size: 26px;
-  font-weight: 600;
-  letter-spacing: 0.3px;
-}
-
-.section .label .dims {
-  display: block;
-  margin-top: 4px;
-  font-size: 13px;
-  font-variant-numeric: tabular-nums;
-  opacity: 0.65;
-}
-
-.section .idx {
-  position: absolute;
-  top: 6px;
-  left: 8px;
-  font-size: 13px;
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
-  opacity: 0.5;
-}
-
-/* Display mode: hide chrome unless 'labels' is on */
-body:not(.labels) .section .idx {
-  display: none;
-}
-body:not(.edit):not(.labels) .section .label {
-  display: none;
-}
-
 /* Selected section (edit only): marquee + handles, no box border/glow */
 body.edit .section.selected {
   z-index: 10;
@@ -165,35 +125,6 @@ body.edit .section.selected .handle {
   right: 0;
   top: 50%;
   height: 1px;
-}
-
-/* ---- Status bar ---- */
-.statusbar {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  height: 34px;
-  display: flex;
-  align-items: center;
-  gap: 22px;
-  padding: 0 16px;
-  background: rgba(0, 0, 0, 0.72);
-  border-top: 1px solid rgba(255, 255, 255, 0.12);
-  font-size: 13px;
-  font-variant-numeric: tabular-nums;
-  z-index: 100;
-}
-.statusbar b {
-  color: var(--accent);
-}
-.sb-sel {
-  font-weight: 700;
-  color: var(--accent);
-}
-.sb-hint {
-  margin-left: auto;
-  opacity: 0.6;
 }
 
 /* ---- Overlays (help / export) ---- */

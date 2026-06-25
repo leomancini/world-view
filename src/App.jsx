@@ -21,7 +21,6 @@ export default function App() {
   const [selected, setSelected] = useState(0);
   const [stepIdx, setStepIdx] = useState(0);
   const [edit, setEdit] = useState(false);
-  const [labels, setLabels] = useState(false);
   const [guides, setGuides] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
   const [showExport, setShowExport] = useState(false);
@@ -34,7 +33,6 @@ export default function App() {
     selected,
     stepIdx,
     edit,
-    labels,
     guides,
     showHelp,
     showExport,
@@ -81,8 +79,7 @@ export default function App() {
   useEffect(() => {
     document.body.classList.add("kiosk");
     document.body.classList.toggle("edit", edit);
-    document.body.classList.toggle("labels", labels);
-  }, [edit, labels]);
+  }, [edit]);
 
   // ---- Helpers ----
   function flash(msg) {
@@ -288,10 +285,6 @@ export default function App() {
         case "E":
           setEdit((v) => !v);
           break;
-        case "l":
-        case "L":
-          setLabels((v) => !v);
-          break;
         case "g":
         case "G":
           setGuides((v) => !v);
@@ -338,8 +331,6 @@ export default function App() {
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, []);
-
-  const cur = sections[selected];
 
   return (
     <>
@@ -421,7 +412,7 @@ export default function App() {
                   <kbd>M</kbd> rename &nbsp; <kbd>C</kbd> color
                 </li>
                 <li>
-                  <kbd>G</kbd> guides &nbsp; <kbd>L</kbd> labels
+                  <kbd>G</kbd> alignment guides
                 </li>
                 <li>
                   <kbd>S</kbd> save to server config
