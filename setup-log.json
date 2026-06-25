@@ -1,0 +1,10 @@
+{
+  "app_id": "world-view",
+  "app_name": "World View",
+  "domain": "https://world-view.leo.gd",
+  "host": "localhost",
+  "port": "3138",
+  "author": "leo",
+  "anthropic": false,
+  "created_on": "Wed Jun 24 11:58:26 PM EDT 2026"
+}
