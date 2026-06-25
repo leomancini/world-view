@@ -3,3 +3,6 @@ dist/
 .env
 *.sqlite
 
+# Runtime layout saved from the app (server keeps live calibration here).
+layout.json
+
