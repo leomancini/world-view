@@ -4,6 +4,18 @@ import { DEFAULT_LAYOUT, COLORS, normalizeSection } from "./defaultLayout";
 const STORAGE_KEY = "worldview.layout.v1";
 const STEPS = [1, 5, 10, 25];
 
+// Pick a readable letter color for a given fill (dark letter on light slots).
+function textColorFor(hex) {
+  const m = /^#?([0-9a-f]{6})$/i.exec(hex || "");
+  if (!m) return "rgba(255,255,255,0.92)";
+  const n = parseInt(m[1], 16);
+  const r = (n >> 16) & 255,
+    g = (n >> 8) & 255,
+    b = n & 255;
+  const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+  return luminance > 0.6 ? "rgba(0,0,0,0.78)" : "rgba(255,255,255,0.92)";
+}
+
 export default function App() {
   const [sections, setSections] = useState([]);
   const [selected, setSelected] = useState(0);
@@ -353,6 +365,7 @@ export default function App() {
                   fontSize: Math.round(
                     Math.min(120, Math.max(28, Math.min(s.w, s.h) * 0.4))
                   ),
+                  color: textColorFor(c.fill),
                 }}
               >
                 {String.fromCharCode(65 + i)}
