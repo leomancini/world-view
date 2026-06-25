@@ -8,8 +8,8 @@ export default function App() {
   const [sections, setSections] = useState([]);
   const [selected, setSelected] = useState(0);
   const [stepIdx, setStepIdx] = useState(0);
-  const [edit, setEdit] = useState(true);
-  const [labels, setLabels] = useState(true);
+  const [edit, setEdit] = useState(false);
+  const [labels, setLabels] = useState(false);
   const [guides, setGuides] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
   const [showExport, setShowExport] = useState(false);
@@ -347,13 +347,16 @@ export default function App() {
                 "--stroke": c.stroke,
               }}
             >
-              <span className="idx">{i + 1}</span>
-              <div className="label">
-                <span className="name">{s.name}</span>
-                <span className="dims">
-                  {s.w} × {s.h}
-                </span>
-              </div>
+              <span
+                className="slot-letter"
+                style={{
+                  fontSize: Math.round(
+                    Math.min(120, Math.max(28, Math.min(s.w, s.h) * 0.4))
+                  ),
+                }}
+              >
+                {String.fromCharCode(65 + i)}
+              </span>
               <span className="handle tl" />
               <span className="handle tr" />
               <span className="handle bl" />
@@ -367,25 +370,6 @@ export default function App() {
         <div className="guides">
           <div className="guide-v" />
           <div className="guide-h" />
-        </div>
-      )}
-
-      {edit && (
-        <div className="statusbar">
-          <span className="sb-sel">
-            {cur
-              ? `[${selected + 1}/${sections.length}] ${cur.name}`
-              : "no sections"}
-          </span>
-          {cur && (
-            <span>
-              x {cur.x} y {cur.y} w {cur.w} h {cur.h}
-            </span>
-          )}
-          <span>step {STEPS[stepIdx]}px</span>
-          <span className="sb-hint">
-            press <b>H</b> for help
-          </span>
         </div>
       )}
 

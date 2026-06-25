@@ -43,6 +43,15 @@ body.kiosk {
   background: var(--fill, #222);
 }
 
+/* Single reference letter (A, B, C, …) centered in each slot. */
+.slot-letter {
+  font-weight: 700;
+  line-height: 1;
+  color: rgba(255, 255, 255, 0.92);
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.4);
+  pointer-events: none;
+}
+
 .section .label {
   text-align: center;
   line-height: 1.25;
