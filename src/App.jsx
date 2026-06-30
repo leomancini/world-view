@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { DEFAULT_LAYOUT, COLORS, normalizeSection } from "./defaultLayout";
+import ObjectDetector from "./ObjectDetector";
 
 const STORAGE_KEY = "worldview.layout.v1";
 const STEPS = [1, 5, 10, 25];
@@ -350,17 +351,21 @@ export default function App() {
                 "--stroke": c.stroke,
               }}
             >
-              <span
-                className="slot-letter"
-                style={{
-                  fontSize: Math.round(
-                    Math.min(120, Math.max(28, Math.min(s.w, s.h) * 0.4))
-                  ),
-                  color: textColorFor(c.fill),
-                }}
-              >
-                {String.fromCharCode(65 + i)}
-              </span>
+              {i === 0 ? (
+                <ObjectDetector w={s.w} h={s.h} />
+              ) : (
+                <span
+                  className="slot-letter"
+                  style={{
+                    fontSize: Math.round(
+                      Math.min(120, Math.max(28, Math.min(s.w, s.h) * 0.4))
+                    ),
+                    color: textColorFor(c.fill),
+                  }}
+                >
+                  {String.fromCharCode(65 + i)}
+                </span>
+              )}
               <span className="handle tl" />
               <span className="handle tr" />
               <span className="handle bl" />
