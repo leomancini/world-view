@@ -21,15 +21,19 @@ function colorFor(label) {
 }
 
 // ---- Performance / anti-flicker tuning (paced for low-end Android) ----
-const DETECT_INTERVAL_MS = 200; // ~5 detections/sec — keeps the GPU cool
+// The MediaTek tablet's GPU is weak: each model.detect() saturates the same GPU
+// that composites the video, so detecting too often makes the live feed stutter.
+// Detect less frequently and on a smaller frame; the draw loop still interpolates
+// box motion at display framerate, so boxes stay smooth between detections.
+const DETECT_INTERVAL_MS = 375; // ~2.6 detections/sec — leaves GPU for the video
 const MIN_SCORE = 0.45; // ignore detections below this confidence
 const MIN_HITS = 2; // detections a box must accrue before it's drawn
 const MAX_MISSES = 6; // detection cycles a box survives once it's gone (~1.2s)
 const MATCH_IOU = 0.3; // overlap needed to treat a detection as the same box
 const POS_SMOOTH = 0.25; // 0..1 — lower = smoother/laggier box motion
 const SCORE_SMOOTH = 0.3; // smoothing for the confidence label
-const CAM_WIDTH = 640; // small frame = far less work per detection
-const CAM_HEIGHT = 480;
+const CAM_WIDTH = 480; // small frame = far less work per detection
+const CAM_HEIGHT = 360;
 
 // One COCO-SSD model shared across mounts (loads once).
 let modelPromise = null;
@@ -87,8 +91,13 @@ export default function ObjectDetector({ w, h }) {
       }
       try {
         stream = await navigator.mediaDevices.getUserMedia({
-          // M9 has a front camera only; "user" is the correct facing.
-          video: { facingMode: "user", width: CAM_WIDTH, height: CAM_HEIGHT },
+          // Prefer the rear camera (the wall-mounted tablet's front camera faces
+          // a dark scene). "ideal" so devices with only a front camera still work.
+          video: {
+            facingMode: { ideal: "environment" },
+            width: CAM_WIDTH,
+            height: CAM_HEIGHT,
+          },
           audio: false,
         });
       } catch (e) {
