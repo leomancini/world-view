@@ -75,6 +75,23 @@ function computeMetrics(data, prevLuma, luma) {
   for (let k = 1; k < 64; k++) if (binW[k] > binW[best]) best = k;
   const c = Math.max(1, binN[best]);
 
+  // 32-bin per-channel histogram for the live histogram panel.
+  const rH = new Float32Array(32);
+  const gH = new Float32Array(32);
+  const bH = new Float32Array(32);
+  for (let p = 0; p < n; p++) {
+    rH[data[p * 4] >> 3]++;
+    gH[data[p * 4 + 1] >> 3]++;
+    bH[data[p * 4 + 2] >> 3]++;
+  }
+  let histMax = 1;
+  for (let k = 0; k < 32; k++) {
+    if (rH[k] > histMax) histMax = rH[k];
+    if (gH[k] > histMax) histMax = gH[k];
+    if (bH[k] > histMax) histMax = bH[k];
+  }
+  for (let k = 0; k < 32; k++) { rH[k] /= histMax; gH[k] /= histMax; bH[k] /= histMax; }
+
   return {
     motion,
     brightness: meanLuma / 255,
@@ -86,6 +103,7 @@ function computeMetrics(data, prevLuma, luma) {
       b: Math.round(binB[best] / c),
       sat: binS[best] / c,
     },
+    histogram: { r: rH, g: gH, b: bH },
   };
 }
 

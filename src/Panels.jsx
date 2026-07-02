@@ -11,7 +11,7 @@ import React from "react";
 
 const SEGMENTS = 16;
 const GAP = 3; // px between segments
-const INSET_TOP = 44; // room for label + value above the ladder
+const INSET_TOP = 26; // room for label above the ladder
 const INSET_BOTTOM = 0;
 const INSET_X = 0;
 
@@ -40,9 +40,7 @@ export default function StatPanel({ label, color, value, h }) {
       <div style={{ ...textBase, top: 6, fontSize: 13, letterSpacing: "0.2em", color, textShadow: `0 0 8px ${color}` }}>
         {label}
       </div>
-      <div style={{ ...textBase, top: 24, fontSize: 13, color, textShadow: `0 0 8px ${color}` }}>
-        {String(pct).padStart(3, "0")}
-      </div>
+
 
       {/* LED ladder: bottom-anchored, whole-pixel segments, lit from below. */}
       <div

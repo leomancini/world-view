@@ -1,6 +1,8 @@
 import React, { useEffect, useRef, useState } from "react";
 import { DEFAULT_LAYOUT, COLORS, normalizeSection } from "./defaultLayout";
 import CameraView from "./CameraView";
+import ColorSwatch from "./ColorSwatch";
+import Histogram from "./Histogram";
 import StatPanel from "./Panels";
 
 // Slots D/E/F: one retro meter per scene stat, phosphor-colored.
@@ -40,6 +42,7 @@ export default function App() {
     contrast: 0,
     sharpness: 0,
     dom: { r: 0, g: 0, b: 0, sat: 0 },
+    histogram: null,
   });
 
   // Mirror of state so the single keydown listener never goes stale.
@@ -329,6 +332,10 @@ export default function App() {
             >
               {i === 0 ? (
                 <CameraView onLevels={setMetrics} />
+              ) : i === 1 ? (
+                <ColorSwatch dom={metrics.dom} />
+              ) : i === 2 ? (
+                <Histogram histogram={metrics.histogram} />
               ) : STAT_SLOTS[i] ? (
                 <StatPanel
                   label={STAT_SLOTS[i].label}
