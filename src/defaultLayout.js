@@ -1,7 +1,7 @@
 // Frontend fallback layout, used only if the server can't be reached.
 // The server's layout.default.json is the real seed; keep them in sync.
 export const DEFAULT_LAYOUT = [
-  { name: "Left", x: 8, y: 13, w: 623, h: 625, color: 0 },
+  { name: "Left", x: 5, y: 5, w: 623, h: 633, color: 0 },
   { name: "Top Wide", x: 689, y: 5, w: 374, h: 113, color: 1 },
   { name: "Mid Wide", x: 693, y: 136, w: 366, h: 274, color: 2 },
   { name: "Col 1", x: 689, y: 446, w: 108, h: 192, color: 3 },
