@@ -1,8 +1,15 @@
 import React, { useEffect, useRef, useState } from "react";
 import { DEFAULT_LAYOUT, COLORS, normalizeSection } from "./defaultLayout";
-import ObjectDetector from "./ObjectDetector";
+import CameraView from "./CameraView";
+import StatPanel from "./Panels";
 
-const STORAGE_KEY = "worldview.layout.v1";
+// Slots D/E/F: one retro meter per scene stat, phosphor-colored.
+const STAT_SLOTS = {
+  3: { key: "brightness", label: "LUM", color: "#ffb000" },
+  4: { key: "contrast", label: "CON", color: "#33ff66" },
+  5: { key: "sharpness", label: "SHP", color: "#00e5ff" },
+};
+
 const STEPS = [1, 5, 10, 25];
 
 // Pick a readable letter color for a given fill (dark letter on light slots).
@@ -26,6 +33,14 @@ export default function App() {
   const [showHelp, setShowHelp] = useState(false);
   const [showExport, setShowExport] = useState(false);
   const [toast, setToast] = useState("");
+  // Live scene metrics from the camera, driving the D/E/F panels.
+  const [metrics, setMetrics] = useState({
+    motion: 0,
+    brightness: 0,
+    contrast: 0,
+    sharpness: 0,
+    dom: { r: 0, g: 0, b: 0, sat: 0 },
+  });
 
   // Mirror of state so the single keydown listener never goes stale.
   const ref = useRef({});
@@ -42,20 +57,8 @@ export default function App() {
   const toastTimer = useRef(null);
   const exportRef = useRef(null);
 
-  // ---- Load: localStorage working copy -> server config -> bundled default ----
+  // Load layout from server (layout.default.json), fall back to bundled default.
   useEffect(() => {
-    const ls = localStorage.getItem(STORAGE_KEY);
-    if (ls) {
-      try {
-        const arr = JSON.parse(ls);
-        if (Array.isArray(arr) && arr.length) {
-          setSections(arr.map(normalizeSection));
-          return;
-        }
-      } catch (e) {
-        /* fall through */
-      }
-    }
     fetch("/api/layout")
       .then((r) => r.json())
       .then((d) => {
@@ -68,13 +71,6 @@ export default function App() {
       })
       .catch(() => setSections(DEFAULT_LAYOUT.map(normalizeSection)));
   }, []);
-
-  // Auto-save the live working copy to localStorage.
-  useEffect(() => {
-    if (sections.length) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(sections));
-    }
-  }, [sections]);
 
   // Reflect display toggles on <body> for the CSS rules.
   useEffect(() => {
@@ -182,35 +178,16 @@ export default function App() {
   }
 
   async function saveConfig() {
-    const payload = ref.current.sections;
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
     try {
       const res = await fetch("/api/layout", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ sections: payload }),
+        body: JSON.stringify({ sections: ref.current.sections }),
       });
       if (!res.ok) throw new Error("HTTP " + res.status);
-      flash("Saved to server config");
+      flash("Layout saved");
     } catch (e) {
-      flash("Saved locally (server unreachable)");
-    }
-  }
-
-  async function resetToServer() {
-    try {
-      const d = await (await fetch("/api/layout")).json();
-      const arr =
-        Array.isArray(d.sections) && d.sections.length
-          ? d.sections
-          : DEFAULT_LAYOUT;
-      const norm = arr.map(normalizeSection);
-      setSections(norm);
-      setSelected(0);
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(norm));
-      flash("Reset to saved config");
-    } catch (e) {
-      flash("Could not reach server");
+      flash("Save failed — server unreachable");
     }
   }
 
@@ -320,8 +297,7 @@ export default function App() {
           toggleHelp();
           break;
         case "R":
-          if (e.shiftKey) resetToServer();
-          else handled = false;
+          handled = false;
           break;
         default:
           if (k >= "1" && k <= "9") selectIndex(parseInt(k, 10) - 1);
@@ -352,7 +328,14 @@ export default function App() {
               }}
             >
               {i === 0 ? (
-                <ObjectDetector w={s.w} h={s.h} />
+                <CameraView onLevels={setMetrics} />
+              ) : STAT_SLOTS[i] ? (
+                <StatPanel
+                  label={STAT_SLOTS[i].label}
+                  color={STAT_SLOTS[i].color}
+                  value={metrics[STAT_SLOTS[i].key]}
+                  h={s.h}
+                />
               ) : (
                 <span
                   className="slot-letter"
@@ -420,19 +403,15 @@ export default function App() {
                   <kbd>G</kbd> alignment guides
                 </li>
                 <li>
-                  <kbd>S</kbd> save to server config
+                  <kbd>S</kbd> save layout
                 </li>
                 <li>
                   <kbd>P</kbd> export JSON
                 </li>
-                <li>
-                  <kbd>Shift</kbd>+<kbd>R</kbd> reset to saved config
-                </li>
               </ul>
             </div>
             <p className="dim">
-              Layout auto-saves locally; press S to publish to the server.
-              Screen: {window.innerWidth} × {window.innerHeight}
+              Press S to save layout. Screen: {window.innerWidth} × {window.innerHeight}
             </p>
           </div>
         </div>
