@@ -231,7 +231,7 @@ export default function DecartCamera({ apiKey, prompt, onLevels }) {
 
   const message = !apiKey
     ? apiKey === ""
-      ? "Access key missing or invalid — open with ?key=…"
+      ? "No API key"
       : "" // key still loading
     : paused
     ? ""
