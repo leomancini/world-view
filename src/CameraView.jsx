@@ -107,6 +107,35 @@ function computeMetrics(data, prevLuma, luma) {
   };
 }
 
+// Sample a playing <video> on a tiny offscreen canvas and report scene metrics
+// through onLevelsRef (a ref, so the caller can swap callbacks without
+// restarting). Returns a stop function. Shared with DecartCamera so the
+// side panels can track whichever feed is in the main slot.
+export function startMetricsSampling(video, onLevelsRef) {
+  const canvas = document.createElement("canvas");
+  canvas.width = SAMPLE_W;
+  canvas.height = SAMPLE_H;
+  const ctx = canvas.getContext("2d", { willReadFrequently: true });
+  let luma = new Float32Array(SAMPLE_W * SAMPLE_H);
+  let prevLuma = null;
+  const timer = setInterval(() => {
+    if (!video.videoWidth || !onLevelsRef.current) return;
+    try {
+      ctx.drawImage(video, 0, 0, SAMPLE_W, SAMPLE_H);
+      const { data } = ctx.getImageData(0, 0, SAMPLE_W, SAMPLE_H);
+      onLevelsRef.current(computeMetrics(data, prevLuma, luma));
+      // Reuse the buffers: current luma becomes previous, old previous is
+      // overwritten next tick.
+      const swap = prevLuma || new Float32Array(SAMPLE_W * SAMPLE_H);
+      prevLuma = luma;
+      luma = swap;
+    } catch (e) {
+      /* transient — skip this sample */
+    }
+  }, SAMPLE_MS);
+  return () => clearInterval(timer);
+}
+
 // Plain live camera feed — no detection, no overlays, no heavy processing.
 // Optionally reports scene metrics (motion, brightness, contrast, sharpness,
 // dominant color) via onLevels for the side panels.
@@ -122,7 +151,7 @@ export default function CameraView({ onLevels }) {
   useEffect(() => {
     let stream = null;
     let cancelled = false;
-    let sampleTimer = 0;
+    let stopSampling = null;
 
     async function start() {
       try {
@@ -146,35 +175,14 @@ export default function CameraView({ onLevels }) {
       await video.play().catch(() => {});
       setStatus("");
 
-      // Sample the frame on a small offscreen canvas and derive the metrics.
-      const canvas = document.createElement("canvas");
-      canvas.width = SAMPLE_W;
-      canvas.height = SAMPLE_H;
-      const ctx = canvas.getContext("2d", { willReadFrequently: true });
-      let luma = new Float32Array(SAMPLE_W * SAMPLE_H);
-      let prevLuma = null;
-      sampleTimer = setInterval(() => {
-        if (!video.videoWidth || !onLevelsRef.current) return;
-        try {
-          ctx.drawImage(video, 0, 0, SAMPLE_W, SAMPLE_H);
-          const { data } = ctx.getImageData(0, 0, SAMPLE_W, SAMPLE_H);
-          onLevelsRef.current(computeMetrics(data, prevLuma, luma));
-          // Reuse the buffers: current luma becomes previous, old previous is
-          // overwritten next tick.
-          const swap = prevLuma || new Float32Array(SAMPLE_W * SAMPLE_H);
-          prevLuma = luma;
-          luma = swap;
-        } catch (e) {
-          /* transient — skip this sample */
-        }
-      }, SAMPLE_MS);
+      stopSampling = startMetricsSampling(video, onLevelsRef);
     }
 
     start();
 
     return () => {
       cancelled = true;
-      clearInterval(sampleTimer);
+      if (stopSampling) stopSampling();
       if (stream) stream.getTracks().forEach((t) => t.stop());
     };
   }, []);

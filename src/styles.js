@@ -1,0 +1,28 @@
+// Preset restyle looks, same list as magic-camera-android. `name` shows in the
+// style carousel, `prompt` is what gets sent to Decart.
+export const STYLES = [
+  { name: "Anime",        prompt: "Vibrant Japanese anime, bold cel shading, clean ink outlines, expressive eyes" },
+  { name: "Cyberpunk",    prompt: "Neon cyberpunk city at night, glowing signs, rain-slick reflections, teal and magenta lights" },
+  { name: "Ghibli",       prompt: "Studio Ghibli hand-painted animation, soft watercolor skies, warm nostalgic lighting" },
+  { name: "Watercolor",   prompt: "Loose watercolor painting, bleeding pigments, visible paper texture, soft washes" },
+  { name: "Comic Book",   prompt: "Bold comic book art, heavy black ink outlines, halftone dot shading, pop-art colors" },
+  { name: "Claymation",   prompt: "Claymation stop-motion, sculpted modeling clay, fingerprint texture, soft studio light" },
+  { name: "Pixel Art",    prompt: "Retro 16-bit pixel art, limited palette, crisp dithered shading, video game sprite look" },
+  { name: "Van Gogh",     prompt: "Van Gogh oil painting, swirling thick impasto brushstrokes, vivid expressive color" },
+  { name: "Vaporwave",    prompt: "80s vaporwave aesthetic, pastel neon gradients, chrome, retro grid, dreamy glow" },
+  { name: "Pencil Sketch",prompt: "Detailed graphite pencil sketch, cross-hatching, smudged shading, white paper" },
+  { name: "Stained Glass",prompt: "Stained glass window, bold black leading, glowing translucent colored panels" },
+  { name: "Lego",         prompt: "Everything built from LEGO bricks and minifigures, glossy plastic, studs visible" },
+  { name: "Ukiyo-e",      prompt: "Japanese ukiyo-e woodblock print, Hokusai, flat color planes, bold outlines, textured washi paper" },
+  { name: "Low Poly",     prompt: "Low-poly 3D render, faceted geometric triangles, flat-shaded gradients, clean studio lighting" },
+  { name: "Marble",       prompt: "Carved white marble statue, classical sculpture, smooth polished stone, soft museum lighting" },
+  { name: "Graffiti",     prompt: "Vibrant street graffiti mural, spray paint, bold drippy tags, stencils, concrete wall" },
+  { name: "Embroidery",   prompt: "Embroidered fabric, cross-stitch threads, woven yarn texture, soft felt, visible stitching" },
+  { name: "Steampunk",    prompt: "Steampunk, brass gears and copper pipes, Victorian clockwork machinery, warm amber tones" },
+  { name: "Pop Art",      prompt: "Andy Warhol pop art, flat blocks of saturated color, screen-print halftone, high contrast" },
+  { name: "Neon Grid",    prompt: "Glowing neon wireframe on a dark void, electric blue Tron grid lines, digital outlines" },
+  { name: "Wes Anderson", prompt: "Wes Anderson film still, perfectly symmetrical, muted pastel palette, retro whimsical" },
+  { name: "Gothic",       prompt: "Tim Burton gothic, dark whimsical, twisted elongated shadows, desaturated spooky storybook" },
+  { name: "Origami",      prompt: "Folded paper origami and layered papercraft, crisp creases, cut-paper shadows, pastel sheets" },
+  { name: "Thermal",      prompt: "Thermal infrared camera, glowing heatmap, hot reds and yellows over cold blue background" },
+];

@@ -1,17 +1,19 @@
 import React, { useEffect, useRef, useState } from "react";
 import { DEFAULT_LAYOUT, COLORS, normalizeSection } from "./defaultLayout";
-import CameraView from "./CameraView";
-import ColorSwatch from "./ColorSwatch";
 import Histogram from "./Histogram";
 import StatPanel from "./Panels";
+import DecartCamera from "./DecartCamera";
+import StyleCarousel from "./StyleCarousel";
+import { STYLES } from "./styles";
 
-// Slots D/E/F: one retro meter per scene stat, phosphor-colored.
+// Slots D/E/F: one retro meter per scene stat, monochrome white-on-black.
 const STAT_SLOTS = {
-  3: { key: "brightness", label: "LUM", color: "#ffb000" },
-  4: { key: "contrast", label: "CON", color: "#33ff66" },
-  5: { key: "sharpness", label: "SHP", color: "#00e5ff" },
+  3: { key: "brightness", label: "LUM", color: "#fff" },
+  4: { key: "contrast", label: "CON", color: "#fff" },
+  5: { key: "sharpness", label: "SHP", color: "#fff" },
 };
 
+const STYLE_KEY = "worldview.style.v1";
 const STEPS = [1, 5, 10, 25];
 
 // Pick a readable letter color for a given fill (dark letter on light slots).
@@ -44,6 +46,25 @@ export default function App() {
     dom: { r: 0, g: 0, b: 0, sat: 0 },
     histogram: null,
   });
+
+  // Decart restyle: current style index (persisted) and the API key, which
+  // the server hands out at runtime so it never gets baked into the bundle.
+  const [styleIndex, setStyleIndex] = useState(() => {
+    const i = parseInt(localStorage.getItem(STYLE_KEY), 10);
+    return i >= 0 && i < STYLES.length ? i : 0;
+  });
+  const [decartKey, setDecartKey] = useState(null); // null = loading, "" = missing
+
+  useEffect(() => {
+    localStorage.setItem(STYLE_KEY, String(styleIndex));
+  }, [styleIndex]);
+
+  useEffect(() => {
+    fetch("/api/config")
+      .then((r) => r.json())
+      .then((d) => setDecartKey(d.decartApiKey || ""))
+      .catch(() => setDecartKey(""));
+  }, []);
 
   // Mirror of state so the single keydown listener never goes stale.
   const ref = useRef({});
@@ -331,9 +352,18 @@ export default function App() {
               }}
             >
               {i === 0 ? (
-                <CameraView onLevels={setMetrics} />
+                <DecartCamera
+                  apiKey={decartKey}
+                  prompt={STYLES[styleIndex].prompt}
+                  onLevels={setMetrics}
+                />
               ) : i === 1 ? (
-                <ColorSwatch dom={metrics.dom} />
+                <StyleCarousel
+                  styles={STYLES}
+                  index={styleIndex}
+                  onChange={setStyleIndex}
+                  w={s.w}
+                />
               ) : i === 2 ? (
                 <Histogram histogram={metrics.histogram} />
               ) : STAT_SLOTS[i] ? (

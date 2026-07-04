@@ -36,7 +36,7 @@ export default function StatPanel({ label, color, value, h }) {
   const ladderH = SEGMENTS * segH + (SEGMENTS - 1) * GAP;
 
   return (
-    <div style={{ position: "absolute", inset: 0, background: "#0a0a08" }}>
+    <div style={{ position: "absolute", inset: 0, background: "#000" }}>
       <div style={{ ...textBase, top: 6, fontSize: 13, letterSpacing: "0.2em", color, textShadow: `0 0 8px ${color}` }}>
         {label}
       </div>

@@ -36,6 +36,28 @@ function validSections(arr) {
   );
 }
 
+// Secrets live in the gitignored .env next to this file (see .env.example),
+// so deploys never carry or clobber them. Read per request so a key can be
+// added or rotated without restarting the server.
+function readEnvFile() {
+  const out = {};
+  try {
+    for (const line of readFileSync(join(__dirname, ".env"), "utf8").split("\n")) {
+      const m = /^\s*([A-Za-z0-9_]+)\s*=\s*(.*?)\s*$/.exec(line);
+      if (m && !m[1].startsWith("#")) out[m[1]] = m[2].replace(/^["']|["']$/g, "");
+    }
+  } catch (e) {
+    /* no .env */
+  }
+  return out;
+}
+
+// Runtime config for the frontend (keeps the API key out of the built bundle).
+app.get("/api/config", (req, res) => {
+  const key = process.env.DECART_API_KEY || readEnvFile().DECART_API_KEY || "";
+  res.json({ decartApiKey: key });
+});
+
 app.get("/api/layout", (req, res) => {
   res.json({ sections: readLayout() });
 });
