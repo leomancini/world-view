@@ -29,10 +29,10 @@ this machine both live under `~/Developer/world-view-system/`.
 `.env` (gitignored, see `.env.example`) holds `DECART_API_KEY` and
 `ACCESS_KEY`. `GET /api/config` returns the Decart key **only** when the
 request carries `?key=<ACCESS_KEY>`; the app forwards its own `?key=` URL
-param. Without it the camera slot shows "No API key". The production `.env`
-lives at `/home/leo/full-stack-apps/world-view/.env` (`leo@root.noshado.ws`,
-SSH from Leo's Mac works) — deploys don't touch it; new env vars must be added
-there manually.
+param. Without it the camera slot shows "No API key". The production server
+has its own `.env` in the deployed app directory (same host/path as the deploy
+target in `.github/workflows/deploy.yml`; SSH from Leo's Mac works) — deploys
+don't touch it; new env vars must be added there manually.
 
 ## Workflow
 
