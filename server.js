@@ -53,8 +53,15 @@ function readEnvFile() {
 }
 
 // Runtime config for the frontend (keeps the API key out of the built bundle).
+// Gated by the ACCESS_KEY from .env: the app forwards its ?key= URL param, so
+// without it the Decart key is never handed out and the camera won't stream.
 app.get("/api/config", (req, res) => {
-  const key = process.env.DECART_API_KEY || readEnvFile().DECART_API_KEY || "";
+  const env = readEnvFile();
+  const accessKey = process.env.ACCESS_KEY || env.ACCESS_KEY || "";
+  if (!accessKey || req.query.key !== accessKey) {
+    return res.status(403).json({ error: "Invalid or missing access key" });
+  }
+  const key = process.env.DECART_API_KEY || env.DECART_API_KEY || "";
   res.json({ decartApiKey: key });
 });
 

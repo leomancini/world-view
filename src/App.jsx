@@ -60,8 +60,11 @@ export default function App() {
   }, [styleIndex]);
 
   useEffect(() => {
-    fetch("/api/config")
-      .then((r) => r.json())
+    // Forward the page's ?key= access key; without a valid one the server
+    // refuses to hand out the Decart key and the camera stays off.
+    const accessKey = new URLSearchParams(window.location.search).get("key");
+    fetch("/api/config?key=" + encodeURIComponent(accessKey || ""))
+      .then((r) => (r.ok ? r.json() : {}))
       .then((d) => setDecartKey(d.decartApiKey || ""))
       .catch(() => setDecartKey(""));
   }, []);
