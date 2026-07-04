@@ -268,15 +268,15 @@ export default function DecartCamera({ apiKey, prompt, onLevels }) {
           <div className="decart-play" />
         </div>
       )}
-      {message && (
-        <div className="decart-status">
-          {message === "Connecting…" || message === "Reconnecting…" ? (
+      {message &&
+        (message === "Connecting…" || message === "Reconnecting…" ? (
+          // Same dimmed overlay as the paused state, spinner instead of play.
+          <div className="decart-status decart-dim">
             <div className="decart-spinner" />
-          ) : (
-            message
-          )}
-        </div>
-      )}
+          </div>
+        ) : (
+          <div className="decart-status">{message}</div>
+        ))}
     </div>
   );
 }

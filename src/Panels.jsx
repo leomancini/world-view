@@ -20,8 +20,8 @@ const textBase = {
   left: 0,
   right: 0,
   textAlign: "center",
-  fontFamily: '"Courier New", ui-monospace, monospace',
-  fontWeight: 700,
+  fontFamily: '"Roboto Mono", "Courier New", ui-monospace, monospace',
+  fontWeight: 400,
   zIndex: 1,
 };
 
