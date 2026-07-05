@@ -8,13 +8,19 @@ const RETRY_DELAY_MS = 5000; // kiosk: retry automatically instead of tap-to-res
 // setPrompt resolves on the server's prompt_ack, i.e. when the new style is
 // applied; this buffer covers the first restyled frames' trip over WebRTC.
 const STYLE_ACK_BUFFER_MS = 400;
+// Idle on one style this long and the feed auto-pauses (freeze frame, camera
+// off); a style switch or manual tap-to-resume restarts the countdown, but
+// once paused it stays paused until tapped — no auto-resume.
+const AUTO_PAUSE_MS = 60000;
 
 // Live camera restyled through Decart's realtime API (same flow as
 // magic-camera-android). Tap anywhere on the feed to pause — camera off,
-// nothing sent to Decart — and tap again to resume. While connected it
-// reports scene metrics from the *stylized* feed via onLevels, so the
-// histogram and meter panels react to what's on screen. `prompt` changes
-// are pushed into the live session without reconnecting.
+// nothing sent to Decart — and tap again to resume. It also auto-pauses
+// after a minute of sitting on the same style (see AUTO_PAUSE_MS); switching
+// styles resets that countdown, but once auto-paused it stays paused until
+// tapped. While connected it reports scene metrics from the *stylized* feed
+// via onLevels, so the histogram and meter panels react to what's on screen.
+// `prompt` changes are pushed into the live session without reconnecting.
 export default function DecartCamera({ apiKey, prompt, onLevels }) {
   const videoRef = useRef(null);
   const realtimeRef = useRef(null);
@@ -228,6 +234,20 @@ export default function DecartCamera({ apiKey, prompt, onLevels }) {
   }, [prompt]);
 
   useEffect(() => () => clearTimeout(fadeTimer.current), []);
+
+  // Auto-pause after a minute of no style change. Resets on every prompt
+  // switch and on manual resume; once paused, stays paused (no re-arm) until
+  // the next tap-to-resume restarts the countdown.
+  const autoPauseTimer = useRef(null);
+  useEffect(() => {
+    clearTimeout(autoPauseTimer.current);
+    if (paused) return;
+    autoPauseTimer.current = setTimeout(() => {
+      captureFreeze();
+      setPaused(true);
+    }, AUTO_PAUSE_MS);
+    return () => clearTimeout(autoPauseTimer.current);
+  }, [prompt, paused]);
 
   const message = !apiKey
     ? apiKey === ""
