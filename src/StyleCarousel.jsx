@@ -19,13 +19,28 @@ export default function StyleCarousel({ styles, index, onChange, w }) {
   const peek = Math.round(w * PEEK);
   const n = styles.length;
 
-  // Anchor per position: x is the pinned point, align is which text edge sits
-  // on it (right edge for the left side, center for current, left edge for the
-  // right side). ±2 items park just off the slot edges so swaps slide in.
+  // Anchor per integer position: x is the pinned point, align is which text
+  // edge sits on it (right edge for the left side, center for current, left
+  // edge for the right side, as a translate %). ±2 items park just off the
+  // slot edges so swaps slide in.
   function anchorFor(rel) {
-    if (rel === 0) return { x: w / 2, align: "-50%" };
-    if (rel < 0) return { x: rel === -1 ? peek : -24, align: "-100%" };
-    return { x: rel === 1 ? w - peek : w + 24, align: "0%" };
+    if (rel === 0) return { x: w / 2, align: -50 };
+    if (rel < 0) return { x: rel === -1 ? peek : -24, align: -100 };
+    return { x: rel === 1 ? w - peek : w + 24, align: 0 };
+  }
+
+  // Continuous anchor: while dragging, each name sits on the straight path
+  // between the two integer anchors it's moving between, proportional to drag
+  // progress — so it's already part-way to where it will land, not translated
+  // 1:1 with the finger and snapped after release.
+  function anchorAt(t) {
+    const c = Math.max(-NEIGHBORS, Math.min(NEIGHBORS, t));
+    const lo = Math.floor(c);
+    if (lo === c) return anchorFor(lo);
+    const a = anchorFor(lo);
+    const b = anchorFor(lo + 1);
+    const f = c - lo;
+    return { x: a.x + (b.x - a.x) * f, align: a.align + (b.align - a.align) * f };
   }
 
   function onPointerDown(e) {
@@ -51,22 +66,26 @@ export default function StyleCarousel({ styles, index, onChange, w }) {
     }
   }
 
-  // Render the current name plus NEIGHBORS on each side at their pinned
-  // anchors; the whole strip follows the finger while dragging.
+  // Render the current name plus NEIGHBORS on each side, each at the anchor
+  // for its live (fractional) position.
   const items = [];
   for (let rel = -NEIGHBORS; rel <= NEIGHBORS; rel++) {
     const idx = (index + rel + n) % n;
     // Effective distance from center, in "slots", including the live drag.
     const eff = rel + dragX / spacing;
     const dist = Math.abs(eff);
-    const { x, align } = anchorFor(rel);
+    const { x, align } = anchorAt(eff);
+    // 1 at center, 0.25 at the side anchors, then quickly to 0 within the
+    // first 0.4 slots of outbound travel past a side anchor.
+    const opacity =
+      dist <= 1 ? 1 - dist * 0.75 : Math.max(0, 0.25 * (1 - (dist - 1) / 0.4));
     items.push(
       <span
         key={idx}
         className="carousel-item"
         style={{
-          transform: `translate(calc(${align} + ${x + dragX}px), -50%)`,
-          opacity: Math.max(0.2, 1 - dist * 0.75),
+          transform: `translate(calc(${align}% + ${x}px), -50%)`,
+          opacity,
           fontSize: Math.round(Math.max(13, 21 - dist * 7)),
           transition: dragging ? "none" : "all 0.28s ease",
         }}
