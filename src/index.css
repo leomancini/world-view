@@ -153,7 +153,8 @@ body.kiosk {
 .carousel-item {
   position: absolute;
   top: 50%;
-  left: 50%;
+  /* Anchors in StyleCarousel.jsx are measured from the slot's left edge. */
+  left: 0;
   white-space: nowrap;
   line-height: 1;
   font-family: "Roboto Mono", "Courier New", ui-monospace, monospace;
