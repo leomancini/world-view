@@ -206,7 +206,9 @@ export default function App() {
 
   async function saveConfig() {
     try {
-      const res = await fetch("/api/layout", {
+      // The server only accepts layout saves carrying the page's ?key=.
+      const accessKey = new URLSearchParams(window.location.search).get("key");
+      const res = await fetch("/api/layout?key=" + encodeURIComponent(accessKey || ""), {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ sections: ref.current.sections }),

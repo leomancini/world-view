@@ -69,7 +69,13 @@ app.get("/api/layout", (req, res) => {
   res.json({ sections: readLayout() });
 });
 
+// Same ACCESS_KEY gate as /api/config: only a page opened with ?key= can
+// rewrite the layout.
 app.put("/api/layout", (req, res) => {
+  const accessKey = process.env.ACCESS_KEY || readEnvFile().ACCESS_KEY || "";
+  if (!accessKey || req.query.key !== accessKey) {
+    return res.status(403).json({ error: "Invalid or missing access key" });
+  }
   const sections = req.body && req.body.sections;
   if (!validSections(sections)) {
     return res.status(400).json({ error: "Invalid sections payload" });

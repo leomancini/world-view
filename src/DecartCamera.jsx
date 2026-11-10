@@ -12,6 +12,9 @@ const STYLE_ACK_BUFFER_MS = 400;
 // off); a style switch or manual tap-to-resume restarts the countdown, but
 // once paused it stays paused until tapped — no auto-resume.
 const AUTO_PAUSE_MS = 60000;
+// Safety net for the style fade: longer than the SDK's own setPrompt timeout
+// (15s), so it only matters when the reveal after a style switch never runs.
+const STYLE_FADE_MAX_MS = 20000;
 
 // Live camera restyled through Decart's realtime API (same flow as
 // magic-camera-android). Tap anywhere on the feed to pause — camera off,
@@ -59,6 +62,10 @@ export default function DecartCamera({ apiKey, prompt, onLevels }) {
     let retryTimer = null;
     let revealTimer = null;
     let stopSampling = null;
+    // Bumped by every connect and retry. A connect attempt or session whose
+    // number is no longer current is stale: its callbacks are ignored and it
+    // only cleans up after itself, so there is never more than one session.
+    let generation = 0;
 
     const model = models.realtime(MODEL_NAME);
     const client = createDecartClient({ apiKey });
@@ -98,20 +105,26 @@ export default function DecartCamera({ apiKey, prompt, onLevels }) {
 
     function scheduleRetry(msg) {
       if (cancelled) return;
+      generation++; // events from the session being torn down are stale now
       teardown();
       setRevealed(false);
       setStatus(msg + " — retrying…");
+      clearTimeout(retryTimer);
       retryTimer = setTimeout(connect, RETRY_DELAY_MS);
     }
 
     async function connect() {
       if (cancelled) return;
+      const gen = ++generation;
+      const stale = () => cancelled || gen !== generation;
+      let stream = null;
+      const stopStream = () => stream?.getTracks().forEach((t) => t.stop());
       setRevealed(false);
       setStatus("Connecting…");
       try {
         // Match the model's native capture spec (1280x704@30) so the browser
         // doesn't rescale; `ideal` lets the camera pick the closest it can do.
-        localStream = await navigator.mediaDevices.getUserMedia({
+        stream = await navigator.mediaDevices.getUserMedia({
           // Prefer the rear camera (the wall-mounted tablet's front camera
           // faces a dark scene); front-only devices still work via `ideal`.
           video: {
@@ -122,13 +135,15 @@ export default function DecartCamera({ apiKey, prompt, onLevels }) {
           },
           audio: false,
         });
-        if (cancelled) return teardown();
+        if (stale()) return stopStream();
+        localStream = stream;
 
         let revealScheduled = false;
-        const realtime = await client.realtime.connect(localStream, {
+        const realtime = await client.realtime.connect(stream, {
           model,
           mirror: false,
           onRemoteStream: (transformed) => {
+            if (stale()) return;
             show(transformed);
             // Reveal on the first painted frame (avoids a placeholder flash),
             // with a timer fallback if requestVideoFrameCallback is missing.
@@ -145,9 +160,13 @@ export default function DecartCamera({ apiKey, prompt, onLevels }) {
             prompt: { text: promptRef.current, enhance: true },
           },
         });
-        if (cancelled) {
-          realtime.disconnect?.();
-          return teardown();
+        if (stale()) {
+          try {
+            realtime.disconnect?.();
+          } catch (e) {
+            /* ignore */
+          }
+          return stopStream();
         }
         realtimeRef.current = realtime;
 
@@ -159,6 +178,7 @@ export default function DecartCamera({ apiKey, prompt, onLevels }) {
 
         realtime.on?.("error", (e) => {
           console.error("[DecartCamera] error", e);
+          if (stale()) return;
           const code = e?.code;
           let msg = e?.message || String(e);
           if (code === "INVALID_API_KEY") msg = "Invalid API key";
@@ -171,7 +191,7 @@ export default function DecartCamera({ apiKey, prompt, onLevels }) {
         // rebuild the whole session ourselves.
         realtime.on?.("connectionChange", (state) => {
           console.log("[DecartCamera] connectionChange", state);
-          if (cancelled) return;
+          if (stale()) return;
           if (state === "reconnecting") setStatus("Reconnecting…");
           else if (state === "disconnected") scheduleRetry("Disconnected");
           else if (state === "connected" || state === "generating") {
@@ -189,6 +209,7 @@ export default function DecartCamera({ apiKey, prompt, onLevels }) {
         }
       } catch (e) {
         console.error("[DecartCamera] connect failed", e);
+        if (stale()) return stopStream();
         if (/denied|permission/i.test(e?.message || "")) {
           setStatus("Camera access denied");
         } else {
@@ -215,6 +236,12 @@ export default function DecartCamera({ apiKey, prompt, onLevels }) {
     let stale = false;
     setStyleFading(true);
     clearTimeout(fadeTimer.current);
+    // Fallback: if the reveal below never runs (e.g. this request goes stale
+    // while the session is down), un-fade anyway rather than staying dark.
+    fadeTimer.current = setTimeout(
+      () => setStyleFading(false),
+      STYLE_FADE_MAX_MS
+    );
     (async () => {
       try {
         await realtime.setPrompt(prompt); // resolves on prompt_ack
@@ -223,6 +250,7 @@ export default function DecartCamera({ apiKey, prompt, onLevels }) {
         console.error("[DecartCamera] setPrompt failed", e);
       }
       if (stale) return;
+      clearTimeout(fadeTimer.current);
       fadeTimer.current = setTimeout(
         () => setStyleFading(false),
         STYLE_ACK_BUFFER_MS
