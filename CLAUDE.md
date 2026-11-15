@@ -17,6 +17,8 @@ this machine both live under `~/Developer/world-view-system/`.
      switches fade the feed out and reveal on the server's `prompt_ack`, and
      also reset a 1-minute auto-pause countdown (`AUTO_PAUSE_MS`); idling on
      one style for a minute auto-pauses, and it stays paused until tapped.
+     It also auto-pauses when the *raw* camera looks blank (dark, one flat
+     color, or no edges) for 3s (`startBlankWatch`; tune with `?debug=blank`).
   1. `StyleCarousel` — swipeable style-name picker (styles in `src/styles.js`),
      shared `styleIndex` state lives in App.
   2. `Histogram`, 3–5. `StatPanel` (LUM/CON/SHP) — driven by metrics sampled
