@@ -5,7 +5,7 @@ import { startMetricsSampling } from "./CameraView";
 const MODEL_NAME = "lucy-latest";
 // Decart's fast tier: lower latency, same quality, billed at 2x. Only works
 // for lucy-2.x / lucy-latest (US region); set to undefined for standard.
-const SPEED = undefined; // or "fast"
+const SPEED = "fast"; // or undefined for standard
 const REVEAL_DELAY_MS = 2500; // fallback reveal if no painted frame is detected
 const RETRY_DELAY_MS = 5000; // kiosk: retry automatically instead of tap-to-resume
 // setPrompt resolves on the server's prompt_ack, i.e. when the new style is
