@@ -12,11 +12,13 @@ this machine both live under `~/Developer/world-view-system/`.
   component per slot, and owns the keyboard-driven layout editor (press `H` in
   the app for keys). Slot indexes are load-bearing:
   0. `DecartCamera` — camera restyled live through Decart's realtime API
-     (`lucy-restyle-2` via `@decartai/sdk`, same flow as magic-camera-android).
+     (`lucy-latest` via `@decartai/sdk`, same flow as magic-camera-android).
      Tap pauses/resumes (freeze frame, no frames sent while paused). Style
      switches fade the feed out and reveal on the server's `prompt_ack`, and
      also reset a 1-minute auto-pause countdown (`AUTO_PAUSE_MS`); idling on
      one style for a minute auto-pauses, and it stays paused until tapped.
+     It also auto-pauses when the *raw* camera looks blank (dark, one flat
+     color, or no edges) for 3s (`startBlankWatch`; tune with `?debug=blank`).
   1. `StyleCarousel` — swipeable style-name picker (styles in `src/styles.js`),
      shared `styleIndex` state lives in App.
   2. `Histogram`, 3–5. `StatPanel` (LUM/CON/SHP) — driven by metrics sampled

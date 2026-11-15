@@ -2,7 +2,10 @@ import React, { useEffect, useRef, useState } from "react";
 import { createDecartClient, models } from "@decartai/sdk";
 import { startMetricsSampling } from "./CameraView";
 
-const MODEL_NAME = "lucy-restyle-2";
+const MODEL_NAME = "lucy-latest";
+// Decart's fast tier: lower latency, same quality, billed at 2x. Only works
+// for lucy-2.x / lucy-latest (US region); set to undefined for standard.
+const SPEED = "fast"; // or undefined for standard
 const REVEAL_DELAY_MS = 2500; // fallback reveal if no painted frame is detected
 const RETRY_DELAY_MS = 5000; // kiosk: retry automatically instead of tap-to-resume
 // setPrompt resolves on the server's prompt_ack, i.e. when the new style is
@@ -15,13 +18,120 @@ const AUTO_PAUSE_MS = 60000;
 // Safety net for the style fade: longer than the SDK's own setPrompt timeout
 // (15s), so it only matters when the reveal after a style switch never runs.
 const STYLE_FADE_MAX_MS = 20000;
+// Auto-pause when the *raw* camera sees nothing worth restyling: too dark, a
+// flat field of one color (lens pressed against something), or no edges at
+// all (badly out of focus). Checked on the raw feed because the model
+// invents texture even from a black frame. The scene has to stay blank for
+// BLANK_PAUSE_MS before we pause, so a hand passing by doesn't trigger it.
+// Thresholds are 0–255 luma at BLANK_W x BLANK_H; tune on the tablet with
+// ?debug=blank in the URL (logs the numbers every second).
+const BLANK_CHECK_MS = 250;
+const BLANK_PAUSE_MS = 3000;
+const BLANK_W = 64;
+const BLANK_H = 48;
+const DARK_LUMA = 20; // mean luma below this = mostly black
+const FLAT_STD = 10; // luma std-dev below this = one flat color
+const EDGE_STEP = 10; // neighbor luma jump that counts as an edge
+const MIN_EDGE_FRACTION = 0.02; // fewer edge pixels than this = blurry
+const DEBUG_BLANK = /[?&]debug=blank\b/.test(window.location.search);
+
+// Score one tiny RGBA frame. Returns the reason it looks blank, or null.
+function blankReason(data, w, h, log) {
+  const n = w * h;
+  const luma = new Float32Array(n);
+  let sum = 0;
+  for (let p = 0; p < n; p++) {
+    const i = p * 4;
+    const l = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
+    luma[p] = l;
+    sum += l;
+  }
+  const mean = sum / n;
+  let varSum = 0;
+  let edges = 0;
+  for (let p = 0; p < n; p++) {
+    const d = luma[p] - mean;
+    varSum += d * d;
+    const x = p % w;
+    const gx = x < w - 1 ? Math.abs(luma[p + 1] - luma[p]) : 0;
+    const gy = p + w < n ? Math.abs(luma[p + w] - luma[p]) : 0;
+    if (Math.max(gx, gy) >= EDGE_STEP) edges++;
+  }
+  const std = Math.sqrt(varSum / n);
+  const edgeFraction = edges / n;
+  const reason =
+    mean < DARK_LUMA
+      ? "dark"
+      : std < FLAT_STD
+      ? "flat"
+      : edgeFraction < MIN_EDGE_FRACTION
+      ? "blurry"
+      : null;
+  if (log) {
+    console.log(
+      `[DecartCamera] blank check mean=${mean.toFixed(1)} std=${std.toFixed(
+        1
+      )} edges=${(edgeFraction * 100).toFixed(1)}% -> ${reason || "ok"}`
+    );
+  }
+  return reason;
+}
+
+// Watch the raw camera stream and call onBlank(reason) once it has looked
+// blank for BLANK_PAUSE_MS straight. onBlankStart fires when a blank streak
+// begins (used to grab a freeze frame while the restyled feed still shows
+// the real scene). Returns a stop function.
+function startBlankWatch(stream, onBlankStart, onBlank) {
+  const video = document.createElement("video");
+  video.muted = true;
+  video.playsInline = true;
+  video.srcObject = stream;
+  video.play().catch(() => {});
+  const canvas = document.createElement("canvas");
+  canvas.width = BLANK_W;
+  canvas.height = BLANK_H;
+  const ctx = canvas.getContext("2d", { willReadFrequently: true });
+  let blankSince = null;
+  let fired = false;
+  let lastLog = 0;
+  const timer = setInterval(() => {
+    if (fired || !video.videoWidth) return;
+    try {
+      ctx.drawImage(video, 0, 0, BLANK_W, BLANK_H);
+      const { data } = ctx.getImageData(0, 0, BLANK_W, BLANK_H);
+      const now = Date.now();
+      const log = DEBUG_BLANK && now - lastLog >= 1000;
+      if (log) lastLog = now;
+      const reason = blankReason(data, BLANK_W, BLANK_H, log);
+      if (!reason) {
+        blankSince = null;
+        return;
+      }
+      if (blankSince === null) {
+        blankSince = now;
+        onBlankStart();
+      } else if (now - blankSince >= BLANK_PAUSE_MS) {
+        fired = true;
+        onBlank(reason);
+      }
+    } catch (e) {
+      /* transient — skip this sample */
+    }
+  }, BLANK_CHECK_MS);
+  return () => {
+    clearInterval(timer);
+    video.srcObject = null;
+  };
+}
 
 // Live camera restyled through Decart's realtime API (same flow as
 // magic-camera-android). Tap anywhere on the feed to pause — camera off,
 // nothing sent to Decart — and tap again to resume. It also auto-pauses
 // after a minute of sitting on the same style (see AUTO_PAUSE_MS); switching
 // styles resets that countdown, but once auto-paused it stays paused until
-// tapped. While connected it reports scene metrics from the *stylized* feed
+// tapped. It also auto-pauses when the raw camera sees basically nothing
+// (dark, one flat color, or totally out of focus) for a few seconds — see
+// startBlankWatch. While connected it reports scene metrics from the *stylized* feed
 // via onLevels, so the histogram and meter panels react to what's on screen.
 // `prompt` changes are pushed into the live session without reconnecting.
 export default function DecartCamera({ apiKey, prompt, onLevels }) {
@@ -62,6 +172,7 @@ export default function DecartCamera({ apiKey, prompt, onLevels }) {
     let retryTimer = null;
     let revealTimer = null;
     let stopSampling = null;
+    let stopBlankWatch = null;
     // Bumped by every connect and retry. A connect attempt or session whose
     // number is no longer current is stale: its callbacks are ignored and it
     // only cleans up after itself, so there is never more than one session.
@@ -90,6 +201,10 @@ export default function DecartCamera({ apiKey, prompt, onLevels }) {
       if (stopSampling) {
         stopSampling();
         stopSampling = null;
+      }
+      if (stopBlankWatch) {
+        stopBlankWatch();
+        stopBlankWatch = null;
       }
       try {
         realtimeRef.current?.disconnect?.();
@@ -141,6 +256,7 @@ export default function DecartCamera({ apiKey, prompt, onLevels }) {
         let revealScheduled = false;
         const realtime = await client.realtime.connect(stream, {
           model,
+          ...(SPEED ? { speed: SPEED } : {}),
           mirror: false,
           onRemoteStream: (transformed) => {
             if (stale()) return;
@@ -175,6 +291,20 @@ export default function DecartCamera({ apiKey, prompt, onLevels }) {
         if (videoRef.current) {
           stopSampling = startMetricsSampling(videoRef.current, onLevelsRef);
         }
+
+        stopBlankWatch = startBlankWatch(
+          stream,
+          () => {
+            if (!stale()) captureFreeze();
+          },
+          (reason) => {
+            if (stale()) return;
+            console.log("[DecartCamera] auto-pausing, camera looks", reason);
+            // Freeze was already grabbed when the blank streak started, so
+            // the paused slot shows the last real scene, not a black frame.
+            setPaused(true);
+          }
+        );
 
         realtime.on?.("error", (e) => {
           console.error("[DecartCamera] error", e);
